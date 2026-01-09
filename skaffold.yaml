@@ -1,0 +1,31 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: solar-system
+
+build:
+  local:
+    push: false
+  artifacts:
+    - image: solar-system-app
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+          - src: "**/*.js"
+            dest: .
+          - src: "**/*.html"
+            dest: .
+
+manifests:
+  rawYaml:
+    - k8s/*.yaml
+
+deploy:
+  kubectl:
+    defaultNamespace: "{{.DEV_NAMESPACE}}"
+
+portForward:
+  - resourceType: service
+    resourceName: solar-system
+    port: 3000

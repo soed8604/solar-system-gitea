@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: solar-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: solar-system
+  template:
+    metadata:
+      labels:
+        app: solar-system
+    spec:
+      containers:
+        - name: solar-system
+          image: solar-system-app
+          ports:
+            - containerPort: 3000
+          env:
+            - name: MONGO_URI
+              value: "mongodb://mongodb:27017"
+            - name: MONGO_USERNAME
+              value: "admin"
+            - name: MONGO_PASSWORD
+              value: "password123"

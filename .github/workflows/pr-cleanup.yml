@@ -1,0 +1,118 @@
+name: Cleanup Preview Environment
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  cleanup:
+    name: Cleanup Preview Environment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Configure Kubernetes context
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Delete Helm release
+        continue-on-error: true
+        run: |
+          NAMESPACE="solar-system-pr-${{ github.event.pull_request.number }}"
+          RELEASE_NAME="solar-system-pr-${{ github.event.pull_request.number }}"
+
+          echo "Deleting Helm release: $RELEASE_NAME in namespace: $NAMESPACE"
+          helm uninstall $RELEASE_NAME --namespace $NAMESPACE --wait || true
+
+      - name: Delete namespace
+        continue-on-error: true
+        run: |
+          NAMESPACE="solar-system-pr-${{ github.event.pull_request.number }}"
+
+          echo "Deleting namespace: $NAMESPACE"
+          kubectl delete namespace $NAMESPACE --wait=true --timeout=5m || true
+
+      - name: Verify cleanup
+        run: |
+          NAMESPACE="solar-system-pr-${{ github.event.pull_request.number }}"
+
+          if kubectl get namespace $NAMESPACE 2>/dev/null; then
+            echo "⚠️ Warning: Namespace $NAMESPACE still exists"
+            exit 1
+          else
+            echo "✅ Namespace $NAMESPACE successfully deleted"
+          fi
+
+      - name: Comment PR with cleanup status
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const namespace = `solar-system-pr-${prNumber}`;
+
+            const comment = `## 🧹 Preview Environment Cleaned Up
+
+            The preview environment has been successfully cleaned up.
+
+            **Namespace:** \`${namespace}\` - ✅ Deleted
+            **Helm Release:** \`${namespace}\` - ✅ Uninstalled
+
+            All resources associated with this PR have been removed.
+
+            ---
+            *Cleaned up by GitHub Actions*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+      - name: Cleanup failed
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const namespace = `solar-system-pr-${prNumber}`;
+
+            const comment = `## ⚠️ Preview Environment Cleanup Failed
+
+            The preview environment cleanup encountered an error.
+
+            **Namespace:** \`${namespace}\`
+            **Workflow Run:** [View logs](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+
+            Please manually verify and clean up the namespace if needed:
+
+            \`\`\`bash
+            kubectl delete namespace ${namespace}
+            \`\`\`
+
+            ---
+            *Cleaned up by GitHub Actions*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });

@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-init
+data:
+  init.js: |
+    db = db.getSiblingDB('test');
+    db.planets.insertMany([
+      { id: 0, name: "Sun", description: "The Sun is the star at the center of the Solar System. It is a nearly perfect ball of hot plasma heated by nuclear fusion.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/sun.png", velocity: "0", distance: "0" },
+      { id: 1, name: "Mercury", description: "Mercury is the smallest planet in the Solar System and the closest to the Sun. It has no atmosphere.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/mercury.png", velocity: "47.87 km/s", distance: "57.9M km" },
+      { id: 2, name: "Venus", description: "Venus is the second planet from the Sun. It is the hottest planet due to its thick atmosphere that traps heat.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/venus.png", velocity: "35.02 km/s", distance: "108.2M km" },
+      { id: 3, name: "Earth", description: "Earth is the third planet from the Sun and the only astronomical object known to harbor life. About 71% of its surface is water.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/earth.png", velocity: "29.78 km/s", distance: "149.6M km" },
+      { id: 4, name: "Mars", description: "Mars is the fourth planet from the Sun, called the Red Planet because of iron oxide on its surface.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/mars.png", velocity: "24.07 km/s", distance: "227.9M km" },
+      { id: 5, name: "Jupiter", description: "Jupiter is the largest planet in the Solar System. It is a gas giant with a mass more than all other planets combined.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/jupiter.png", velocity: "13.07 km/s", distance: "778.5M km" },
+      { id: 6, name: "Saturn", description: "Saturn is the sixth planet from the Sun, famous for its prominent ring system made of ice and rock.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/saturn.png", velocity: "9.69 km/s", distance: "1.4B km" },
+      { id: 7, name: "Uranus", description: "Uranus is the seventh planet from the Sun. It rotates on its side, making it unique among planets.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/uranus.png", velocity: "6.81 km/s", distance: "2.9B km" },
+      { id: 8, name: "Neptune", description: "Neptune is the eighth and farthest planet from the Sun with the strongest winds reaching 2,100 km/h.", image: "https://gitlab.com/sidd-harth/solar-system/-/raw/main/images/neptune.png", velocity: "5.43 km/s", distance: "4.5B km" },
+      { id: 9, name: "Pluto", description: "Pluto is a dwarf planet in the Kuiper belt, reclassified from planet in 2006.", image: "https://upload.wikimedia.org/wikipedia/commons/e/ef/Pluto_in_True_Color_-_High-Res.jpg", velocity: "4.74 km/s", distance: "5.9B km" }
+    ]);
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:6
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: "admin"
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: "password123"
+          volumeMounts:
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init-script
+          configMap:
+            name: mongo-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017

@@ -1,0 +1,108 @@
+# Default values for solar-system.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Environment configuration
+environment: dev
+namespace: solar-system-dev
+
+# Application configuration
+app:
+  name: solar-system
+  replicaCount: 1
+
+image:
+  repository: solar-system-app
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: solar-system.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: solar-system-tls
+  #    hosts:
+  #      - solar-system.local
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Probes
+livenessProbe:
+  enabled: true
+  path: /live
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /ready
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# MongoDB configuration
+mongodb:
+  enabled: true
+  name: mongodb
+  replicaCount: 1
+
+  image:
+    repository: mongo
+    tag: "6"
+    pullPolicy: IfNotPresent
+
+  service:
+    port: 27017
+    targetPort: 27017
+
+  auth:
+    username: admin
+    password: password123
+    database: test
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  persistence:
+    enabled: false
+    size: 1Gi
+    storageClass: ""
+
+# Environment variables
+env:
+  mongoUri: "mongodb://mongodb:27017"
+  nodeEnv: "development"
+
+# Labels to apply to all resources
+commonLabels: {}
+
+# Annotations to apply to all resources
+commonAnnotations: {}

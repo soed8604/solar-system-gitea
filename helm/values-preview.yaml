@@ -1,0 +1,58 @@
+# Values for preview environments (PR deployments)
+# These values override the default values.yaml for PR environments
+
+environment: preview
+
+# Ingress enabled for preview environments
+# IMPORTANTE: Para pruebas en GitHub personal:
+#   1. Si NO tienes dominio: Cambia 'enabled: false'
+#   2. Si tienes dominio personal: Cambia 'preview.jelou.dev' por tu dominio
+#   3. Si no tienes cert-manager: Elimina la anotación cluster-issuer y la sección tls
+ingress:
+  enabled: true  # Cambiar a 'false' para pruebas sin dominio
+  className: nginx
+  annotations:
+    # Comentar esta línea si no tienes cert-manager instalado
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    # CAMBIAR 'preview.jelou.dev' por tu dominio personal para pruebas
+    # Ejemplo: "pr-{{ .Values.prNumber }}.preview.tu-dominio.com"
+    # Para empresa JelouLatam, usar: "pr-{{ .Values.prNumber }}.preview.jelou.dev"
+    - host: "pr-{{ .Values.prNumber }}.preview.jelou.dev"
+      paths:
+        - path: /
+          pathType: Prefix
+  # Comentar toda la sección 'tls' si no tienes cert-manager
+  tls:
+    - secretName: "solar-system-pr-{{ .Values.prNumber }}-tls"
+      hosts:
+        # CAMBIAR 'preview.jelou.dev' por tu dominio personal para pruebas
+        - "pr-{{ .Values.prNumber }}.preview.jelou.dev"
+
+# Reduced resources for preview environments
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+mongodb:
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# PR-specific labels
+commonLabels:
+  environment: preview
+  managed-by: github-actions
+
+# PR-specific annotations
+commonAnnotations:
+  deployed-by: github-actions

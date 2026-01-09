@@ -1,0 +1,22 @@
+{{- if .Values.mongodb.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.mongodb.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "solar-system.mongodb.labels" . | nindent 4 }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.mongodb.service.port }}
+      targetPort: {{ .Values.mongodb.service.targetPort }}
+      protocol: TCP
+      name: mongodb
+  selector:
+    {{- include "solar-system.mongodb.selectorLabels" . | nindent 4 }}
+{{- end }}
