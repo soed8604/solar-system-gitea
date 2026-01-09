@@ -93,28 +93,43 @@ jobs:
             --wait \
             --timeout 5m
 
-      - name: Get preview URL
-        id: preview-url
-        run: |
-          NAMESPACE="solar-system-pr-${{ github.event.pull_request.number }}"
-          INGRESS_HOST=$(kubectl get ingress -n $NAMESPACE -o jsonpath='{.items[0].spec.rules[0].host}')
-          echo "url=https://${INGRESS_HOST}" >> $GITHUB_OUTPUT
-
-      - name: Comment PR with preview URL
+      - name: Comment PR with preview info
         uses: actions/github-script@v7
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
-            const previewUrl = '${{ steps.preview-url.outputs.url }}';
             const namespace = `solar-system-pr-${prNumber}`;
+            const serviceName = `solar-system-pr-${prNumber}`;
 
             const comment = `## 🚀 Preview Environment Deployed
 
             Your preview environment has been successfully deployed!
 
-            **Preview URL:** ${previewUrl}
             **Namespace:** \`${namespace}\`
             **Commit:** \`${context.sha.substring(0, 7)}\`
+
+            ### 🔗 Access the Preview:
+
+            Use port-forward to access the application:
+
+            \`\`\`bash
+            kubectl port-forward -n ${namespace} svc/${serviceName} 3000:3000
+            \`\`\`
+
+            Then open: **http://localhost:3000**
+
+            ### 📊 Useful Commands:
+
+            \`\`\`bash
+            # View pods
+            kubectl get pods -n ${namespace}
+
+            # View logs
+            kubectl logs -n ${namespace} -l app=solar-system --tail=50 -f
+
+            # View all resources
+            kubectl get all -n ${namespace}
+            \`\`\`
 
             The environment will be automatically cleaned up when this PR is closed.
 

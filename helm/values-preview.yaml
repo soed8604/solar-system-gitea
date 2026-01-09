@@ -9,7 +9,7 @@ environment: preview
 #   2. Si tienes dominio personal: Cambia 'preview.jelou.dev' por tu dominio
 #   3. Si no tienes cert-manager: Elimina la anotación cluster-issuer y la sección tls
 ingress:
-  enabled: true  # Cambiar a 'false' para pruebas sin dominio
+  enabled: false  # Deshabilitado para pruebas personales - usar port-forward
   className: nginx
   annotations:
     # Comentar esta línea si no tienes cert-manager instalado
