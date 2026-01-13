@@ -85,7 +85,7 @@ jobs:
       - name: Deploy with Helm
         run: |
           NAMESPACE="solar-system-pr-${{ github.event.pull_request.number }}"
-          IMAGE_TAG="pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+          IMAGE_TAG="pr-${{ github.event.pull_request.number }}"
 
           helm upgrade --install \
             solar-system-pr-${{ github.event.pull_request.number }} \
