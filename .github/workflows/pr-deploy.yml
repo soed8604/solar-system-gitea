@@ -136,6 +136,7 @@ jobs:
             --set namespace=$NAMESPACE \
             --set branchName=${{ steps.branch.outputs.name }} \
             --set environment=preview \
+            --set commonAnnotations.commit-sha=${{ github.sha }} \
             --wait \
             --timeout 5m
 

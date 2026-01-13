@@ -3,6 +3,10 @@
 
 environment: preview
 
+# Force pull image on every deploy (same tag, new content)
+image:
+  pullPolicy: Always
+
 # Ingress with AWS ALB
 ingress:
   enabled: true
