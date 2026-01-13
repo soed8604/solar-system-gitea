@@ -47,3 +47,37 @@ If the installation was successful, you should be able to run the following comm
 ## Access Application on Browser
     http://localhost:3000/
 
+---
+## 🚀 Preview Environments
+
+This repository is configured with **automatic preview environments** for Pull Requests!
+
+### How it works:
+
+1. **Create a PR** → GitHub Actions automatically deploys your code
+2. **Get a dedicated environment** → Each PR gets its own isolated Kubernetes namespace
+3. **Test your changes** → Access via port-forward before merging
+4. **Automatic cleanup** → Environment is deleted when PR is closed
+
+### Access your preview:
+
+When you create a PR, GitHub Actions will comment with instructions like:
+
+```bash
+kubectl port-forward -n solar-system-pr-{number} svc/solar-system-pr-{number} 3000:3000
+```
+
+Then open: http://localhost:3000
+
+### Documentation:
+
+- 📖 [Quick Start](./QUICKSTART.md) - Get started in 5 minutes
+- 📚 [Complete Guide](./PREVIEW_ENVIRONMENTS.md) - Full documentation
+- ✅ [Setup Checklist](./SETUP_CHECKLIST.md) - Step-by-step validation
+- 🧪 [Personal Testing](./PERSONAL_GITHUB_TEST.md) - Test in your personal GitHub
+
+---
+**Powered by Kubernetes + Helm + GitHub Actions** 🎉
+
+**
+

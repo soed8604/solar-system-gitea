@@ -9,6 +9,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  AWS_REGION: us-west-2
+  EKS_CLUSTER_NAME: cluster-k8s-staging
 
 jobs:
   deploy:
@@ -18,6 +20,7 @@ jobs:
       contents: read
       packages: write
       pull-requests: write
+      id-token: write  # Requerido para OIDC
 
     steps:
       - name: Checkout code
@@ -55,10 +58,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-deploy
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
@@ -72,7 +74,7 @@ jobs:
 
       - name: Configure Kubernetes context
         run: |
-          aws eks update-kubeconfig --name cluster-k8s-staging --region us-west-2
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
       - name: Create namespace
         run: |
@@ -83,7 +85,7 @@ jobs:
       - name: Deploy with Helm
         run: |
           NAMESPACE="solar-system-pr-${{ github.event.pull_request.number }}"
-          IMAGE_TAG="pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+          IMAGE_TAG="pr-${{ github.event.pull_request.number }}"
 
           helm upgrade --install \
             solar-system-pr-${{ github.event.pull_request.number }} \
@@ -99,13 +101,34 @@ jobs:
             --wait \
             --timeout 5m
 
+      - name: Wait for ALB and get URL
+        id: alb
+        run: |
+          NAMESPACE="solar-system-pr-${{ github.event.pull_request.number }}"
+
+          echo "Waiting for ALB to be provisioned..."
+          for i in {1..30}; do
+            ALB_URL=$(kubectl get ingress -n $NAMESPACE -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+            if [ -n "$ALB_URL" ]; then
+              echo "ALB URL: $ALB_URL"
+              echo "url=http://$ALB_URL" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "Waiting for ALB... attempt $i/30"
+            sleep 10
+          done
+          echo "ALB not ready after 5 minutes"
+          echo "url=pending" >> $GITHUB_OUTPUT
+
       - name: Comment PR with preview info
         uses: actions/github-script@v7
+        env:
+          ALB_URL: ${{ steps.alb.outputs.url }}
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
             const namespace = `solar-system-pr-${prNumber}`;
-            const serviceName = `solar-system-pr-${prNumber}`;
+            const albUrl = process.env.ALB_URL;
 
             const comment = `## 🚀 Preview Environment Deployed
 
@@ -116,13 +139,7 @@ jobs:
 
             ### 🔗 Access the Preview:
 
-            Use port-forward to access the application:
-
-            \`\`\`bash
-            kubectl port-forward -n ${namespace} svc/${serviceName} 3000:3000
-            \`\`\`
-
-            Then open: **http://localhost:3000**
+            ${albUrl !== 'pending' ? `**URL:** ${albUrl}` : '⏳ ALB is still provisioning, URL will be available shortly.'}
 
             ### 📊 Useful Commands:
 
@@ -133,8 +150,8 @@ jobs:
             # View logs
             kubectl logs -n ${namespace} -l app=solar-system --tail=50 -f
 
-            # View all resources
-            kubectl get all -n ${namespace}
+            # View ingress/ALB status
+            kubectl get ingress -n ${namespace}
             \`\`\`
 
             The environment will be automatically cleaned up when this PR is closed.

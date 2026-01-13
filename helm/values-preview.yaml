@@ -3,32 +3,21 @@
 
 environment: preview
 
-# Ingress enabled for preview environments
-# IMPORTANTE: Para pruebas en GitHub personal:
-#   1. Si NO tienes dominio: Cambia 'enabled: false'
-#   2. Si tienes dominio personal: Cambia 'preview.jelou.dev' por tu dominio
-#   3. Si no tienes cert-manager: Elimina la anotación cluster-issuer y la sección tls
+# Ingress with AWS ALB
 ingress:
-  enabled: false  # Deshabilitado para pruebas personales - usar port-forward
-  className: nginx
+  enabled: true
+  className: alb
   annotations:
-    # Comentar esta línea si no tienes cert-manager instalado
-    cert-manager.io/cluster-issuer: letsencrypt-staging
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
   hosts:
-    # CAMBIAR 'preview.jelou.dev' por tu dominio personal para pruebas
-    # Ejemplo: "pr-{{ .Values.prNumber }}.preview.tu-dominio.com"
-    # Para empresa JelouLatam, usar: "pr-{{ .Values.prNumber }}.preview.jelou.dev"
-    - host: "pr-{{ .Values.prNumber }}.preview.jelou.dev"
+    - host: ""  # Empty = use ALB DNS directly
       paths:
         - path: /
           pathType: Prefix
-  # Comentar toda la sección 'tls' si no tienes cert-manager
-  tls:
-    - secretName: "solar-system-pr-{{ .Values.prNumber }}-tls"
-      hosts:
-        # CAMBIAR 'preview.jelou.dev' por tu dominio personal para pruebas
-        - "pr-{{ .Values.prNumber }}.preview.jelou.dev"
+  tls: []
 
 # Reduced resources for preview environments
 resources:

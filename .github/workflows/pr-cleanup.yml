@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: us-west-2
+  EKS_CLUSTER_NAME: cluster-k8s-staging
+
 jobs:
   cleanup:
     name: Cleanup Preview Environment
@@ -13,15 +17,15 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write  # Requerido para OIDC
 
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-cleanup
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
@@ -35,7 +39,7 @@ jobs:
 
       - name: Configure Kubernetes context
         run: |
-          aws eks update-kubeconfig --name cluster-k8s-staging --region us-west-2
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
       - name: Delete Helm release
         continue-on-error: true
